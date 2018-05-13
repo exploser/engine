@@ -49,6 +49,24 @@ type LoggerWriter interface {
 	Sync()
 }
 
+// LeveledLogger is an interface shared by most log libraries.
+type LeveledLogger interface {
+	Debug(...interface{})
+	Debugf(string, ...interface{})
+
+	Info(...interface{})
+	Infof(string, ...interface{})
+
+	Error(...interface{})
+	Errorf(string, ...interface{})
+
+	Fatal(...interface{})
+	Fatalf(string, ...interface{})
+
+	Panic(...interface{})
+	Panicf(string, ...interface{})
+}
+
 // Logger Object state structure
 type Logger struct {
 	name     string
@@ -60,6 +78,9 @@ type Logger struct {
 	parent   *Logger
 	children []*Logger
 }
+
+// Make sure Logger implements LeveledLogger correctly.
+var _ LeveledLogger = new(Logger)
 
 // Logger event passed from the logger to its writers.
 type Event struct {
@@ -164,38 +185,91 @@ func (l *Logger) EnableChild(name string, state bool) {
 	}
 }
 
-// Debug emits a DEBUG level log message
-func (l *Logger) Debug(format string, v ...interface{}) {
+// Debug emits a DEBUG level log message.
+func (l *Logger) Debug(v ...interface{}) {
 
-	l.Log(DEBUG, format, v...)
+	l.Log(DEBUG, v...)
 }
 
-// Info emits an INFO level log message
-func (l *Logger) Info(format string, v ...interface{}) {
+// Debugf emits a DEBUG level log message with formatting.
+func (l *Logger) Debugf(format string, v ...interface{}) {
 
-	l.Log(INFO, format, v...)
+	l.Logf(DEBUG, format, v...)
+}
+
+// Info emits an INFO level log message.
+func (l *Logger) Info(v ...interface{}) {
+
+	l.Log(INFO, v...)
+}
+
+// Infof emits an INFO level log message with formatting.
+func (l *Logger) Infof(format string, v ...interface{}) {
+
+	l.Logf(INFO, format, v...)
 }
 
 // Warn emits a WARN level log message
-func (self *Logger) Warn(format string, v ...interface{}) {
+func (l *Logger) Warn(v ...interface{}) {
 
-	self.Log(WARN, format, v...)
+	l.Log(WARN, v...)
 }
 
-// Error emits an ERROR level log message
-func (self *Logger) Error(format string, v ...interface{}) {
+// Warnf emits a WARN level log message with formatting.
+func (l *Logger) Warnf(format string, v ...interface{}) {
 
-	self.Log(ERROR, format, v...)
+	l.Logf(WARN, format, v...)
 }
 
-// Fatal emits a FATAL level log message
-func (self *Logger) Fatal(format string, v ...interface{}) {
+// Error emits an ERROR level log message.
+func (l *Logger) Error(v ...interface{}) {
 
-	self.Log(FATAL, format, v...)
+	l.Log(ERROR, v...)
 }
 
-// Log emits a log message with the specified level
-func (l *Logger) Log(level int, format string, v ...interface{}) {
+// Errorf emits an ERROR level log message with formatting.
+func (l *Logger) Errorf(format string, v ...interface{}) {
+
+	l.Logf(ERROR, format, v...)
+}
+
+// Fatal emits a FATAL level log message.
+func (l *Logger) Fatal(v ...interface{}) {
+
+	l.Log(FATAL, v...)
+}
+
+// Fatalf emits a FATAL level log message with formatting.
+func (l *Logger) Fatalf(format string, v ...interface{}) {
+
+	l.Logf(FATAL, format, v...)
+}
+
+// Panic emits a FATAL level log message.
+func (l *Logger) Panic(v ...interface{}) {
+
+	l.Log(FATAL, v...)
+}
+
+// Panicf emits a FATAL level log message with formatting.
+func (l *Logger) Panicf(format string, v ...interface{}) {
+
+	l.Logf(FATAL, format, v...)
+}
+
+// Log prints everything to log with no formatting.
+func (l *Logger) Log(level int, v ...interface{}) {
+	var b strings.Builder
+	b.Grow(len(v) * 3)
+	for i := 0; i < len(v); i++ {
+		b.WriteString("%v ")
+	}
+
+	l.Logf(level, b.String(), v...)
+}
+
+// Logf emits a log message with the specified level.
+func (l *Logger) Logf(level int, format string, v ...interface{}) {
 
 	// Ignores message if logger not enabled or with level bellow the current one.
 	if !l.enabled || level < l.level {
@@ -270,10 +344,16 @@ func (l *Logger) writeAll(event *Event) {
 // Functions for the Default Logger
 //
 
-// Log emits a log message with the specified level
-func Log(level int, format string, v ...interface{}) {
+// Log emits a log message with the specified level.
+func Log(level int, v ...interface{}) {
 
-	Default.Log(level, format, v...)
+	Default.Log(level, v...)
+}
+
+// Logf emits a log message with the specified level with formatting.
+func Logf(level int, format string, v ...interface{}) {
+
+	Default.Logf(level, format, v...)
 }
 
 // SetLevel sets the current level of the default logger.
@@ -305,34 +385,34 @@ func AddWriter(writer LoggerWriter) {
 	Default.AddWriter(writer)
 }
 
-// Debug emits a DEBUG level log message
-func Debug(format string, v ...interface{}) {
+// Debugf emits a DEBUG level log message.
+func Debugf(format string, v ...interface{}) {
 
-	Default.Debug(format, v...)
+	Default.Debugf(format, v...)
 }
 
-// Info emits an INFO level log message
-func Info(format string, v ...interface{}) {
+// Infof emits an INFO level log message.
+func Infof(format string, v ...interface{}) {
 
-	Default.Info(format, v...)
+	Default.Infof(format, v...)
 }
 
-// Warn emits a WARN level log message
-func Warn(format string, v ...interface{}) {
+// Warnf emits a WARN level log message.
+func Warnf(format string, v ...interface{}) {
 
-	Default.Warn(format, v...)
+	Default.Warnf(format, v...)
 }
 
-// Error emits an ERROR level log message
-func Error(format string, v ...interface{}) {
+// Errorf emits an ERROR level log message.
+func Errorf(format string, v ...interface{}) {
 
-	Default.Error(format, v...)
+	Default.Errorf(format, v...)
 }
 
-// Fatal emits a FATAL level log message
-func Fatal(format string, v ...interface{}) {
+// Fatalf emits a FATAL level log message.
+func Fatalf(format string, v ...interface{}) {
 
-	Default.Fatal(format, v...)
+	Default.Fatalf(format, v...)
 }
 
 // Find finds a logger with the specified path.
